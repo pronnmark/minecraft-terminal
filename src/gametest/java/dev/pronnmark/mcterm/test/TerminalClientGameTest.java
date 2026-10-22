@@ -1,0 +1,80 @@
+package dev.pronnmark.mcterm.test;
+
+import com.mojang.blaze3d.platform.InputConstants;
+import dev.pronnmark.mcterm.TerminalScreen;
+import net.fabricmc.fabric.api.client.gametest.v1.FabricClientGameTest;
+import net.fabricmc.fabric.api.client.gametest.v1.context.ClientGameTestContext;
+import net.fabricmc.fabric.api.client.gametest.v1.context.TestSingleplayerContext;
+import net.fabricmc.loader.api.FabricLoader;
+
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+/**
+ * Opens the terminal in a real client, runs a shell through the PTY, checks the emulated screen,
+ * then (when MCTERM_TEST_COMMAND is set) runs that command too, e.g. ssh into herdr.
+ */
+public class TerminalClientGameTest implements FabricClientGameTest {
+	@Override
+	public void runTest(ClientGameTestContext context) {
+		writeConfig("[\"bash\", \"--norc\", \"-i\"]");
+		try (TestSingleplayerContext world = context.worldBuilder().create()) {
+			world.getConnection().waitForChunksRender(true, 1200);
+
+			context.getInput().pressKey(InputConstants.KEY_K);
+			context.waitForScreen(TerminalScreen.class);
+			waitForText(context, "$");
+
+			context.getInput().typeChars("printf '\\e[31mred\\e[0m \\e[1;32mbold\\e[0m box:\\u2500\\u2502\\u250c braille:\\u28ff nf:\\uf015\\n'");
+			context.getInput().pressKey(InputConstants.KEY_RETURN);
+			context.getInput().typeChars("echo $TERM $COLUMNS x $LINES");
+			context.getInput().pressKey(InputConstants.KEY_RETURN);
+			waitForText(context, "xterm-256color");
+			String text = context.computeOnClient(TerminalClientGameTest::screenText);
+			if (!text.contains("red bold box:")) throw new AssertionError("printf output missing:\n" + text);
+			context.takeScreenshot("mcterm-shell");
+
+			context.getInput().typeChars("exit");
+			context.getInput().pressKey(InputConstants.KEY_RETURN);
+			context.waitFor(mc -> !((TerminalScreen) mc.gui.screen()).session().isRunning(), 200);
+			context.takeScreenshot("mcterm-exited");
+
+			String command = System.getenv("MCTERM_TEST_COMMAND");
+			if (command != null && !command.isBlank()) {
+				writeConfig(command);
+				// The gametest harness sends key events with modifiers=0, so Ctrl+Shift+W cannot be simulated.
+				context.runOnClient(mc -> mc.gui.screen().onClose());
+				context.waitFor(mc -> mc.gui.screen() == null, 100);
+				context.getInput().pressKey(InputConstants.KEY_K);
+				context.waitForScreen(TerminalScreen.class);
+				context.waitTicks(200);
+				context.takeScreenshot("mcterm-command");
+				System.out.println("[mcterm-test] screen after command:\n" + context.computeOnClient(TerminalClientGameTest::screenText));
+			}
+		}
+	}
+
+	private static void waitForText(ClientGameTestContext context, String needle) {
+		try {
+			context.waitFor(mc -> screenText(mc).contains(needle), 200);
+		} catch (AssertionError e) {
+			throw new AssertionError("'" + needle + "' never appeared; screen:\n" + context.computeOnClient(TerminalClientGameTest::screenText), e);
+		}
+	}
+
+	private static String screenText(net.minecraft.client.Minecraft mc) {
+		return mc.gui.screen() instanceof TerminalScreen screen ? screen.session().screenText() : "";
+	}
+
+	private static void writeConfig(String commandJson) {
+		Path file = FabricLoader.getInstance().getConfigDir().resolve("mcterm.json");
+		try {
+			Files.createDirectories(file.getParent());
+			Files.writeString(file, "{\"command\": " + commandJson + ", \"env\": {}, \"fontSize\": 0}", StandardCharsets.UTF_8);
+		} catch (IOException e) {
+			throw new RuntimeException(e);
+		}
+	}
+}

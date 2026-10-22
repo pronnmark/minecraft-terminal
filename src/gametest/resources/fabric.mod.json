@@ -1,0 +1,13 @@
+{
+	"schemaVersion": 1,
+	"id": "mcterm-test",
+	"version": "0.1.0",
+	"name": "Minecraft Terminal client tests",
+	"environment": "client",
+	"entrypoints": {
+		"fabric-client-gametest": ["dev.pronnmark.mcterm.test.TerminalClientGameTest"]
+	},
+	"depends": {
+		"mcterm": "*"
+	}
+}

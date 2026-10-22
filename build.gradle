@@ -1,0 +1,68 @@
+plugins {
+	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+}
+
+repositories {
+	// JediTerm (JetBrains' terminal emulator core) is published only here.
+	maven {
+		name = 'IntelliJ Dependencies'
+		url = 'https://packages.jetbrains.team/maven/p/ij/intellij-dependencies'
+		content { includeGroup 'org.jetbrains.jediterm' }
+	}
+	mavenCentral()
+}
+
+loom {
+	splitEnvironmentSourceSets()
+
+	mods {
+		"mcterm" {
+			sourceSet sourceSets.main
+			sourceSet sourceSets.client
+		}
+	}
+}
+
+fabricApi {
+	configureTests {
+		createSourceSet = true
+		modId = "mcterm-test"
+		enableGameTests = false
+		enableClientGameTests = true
+		eula = true
+	}
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:${project.minecraft_version}"
+	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+
+	// Terminal emulator (no AWT in -core) + native pseudo-terminal.
+	// JNA and SLF4J are already on Minecraft's classpath, so they are not bundled.
+	implementation("org.jetbrains.jediterm:jediterm-core:${project.jediterm_version}") { transitive = false }
+	implementation("org.jetbrains.pty4j:pty4j:${project.pty4j_version}") { transitive = false }
+	implementation "org.jetbrains.kotlin:kotlin-stdlib:${project.kotlin_stdlib_version}"
+	include "org.jetbrains.jediterm:jediterm-core:${project.jediterm_version}"
+	include "org.jetbrains.pty4j:pty4j:${project.pty4j_version}"
+	include "org.jetbrains.kotlin:kotlin-stdlib:${project.kotlin_stdlib_version}"
+	compileOnly "org.jetbrains:annotations:26.1.0"
+}
+
+processResources {
+	def version = project.version
+	inputs.property "version", version
+
+	filesMatching("fabric.mod.json") {
+		expand "version": version
+	}
+}
+
+tasks.withType(JavaCompile).configureEach {
+	it.options.release = 25
+}
+
+java {
+	sourceCompatibility = JavaVersion.VERSION_25
+	targetCompatibility = JavaVersion.VERSION_25
+}

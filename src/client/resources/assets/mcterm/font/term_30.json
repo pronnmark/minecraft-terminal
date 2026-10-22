@@ -1,0 +1,7 @@
+{
+	"providers": [
+		{ "type": "ttf", "file": "mcterm:jetbrainsmono_nf.ttf", "size": 30.0, "oversample": 1.0 },
+		{ "type": "ttf", "file": "mcterm:notosanssymbols2.ttf", "size": 30.0, "oversample": 1.0 },
+		{ "type": "ttf", "file": "mcterm:notosanssymbols.ttf", "size": 30.0, "oversample": 1.0 }
+	]
+}

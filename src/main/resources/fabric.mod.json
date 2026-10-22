@@ -1,0 +1,22 @@
+{
+	"schemaVersion": 1,
+	"id": "mcterm",
+	"version": "${version}",
+	"name": "Minecraft Terminal",
+	"description": "A real terminal inside Minecraft. Press K to open it; it runs any command (e.g. ssh -t pbox herdr) in a pseudo-terminal.",
+	"authors": ["pronnmark"],
+	"contact": {
+		"sources": "https://github.com/pronnmark/minecraft-terminal"
+	},
+	"license": "MIT",
+	"environment": "client",
+	"entrypoints": {
+		"client": ["dev.pronnmark.mcterm.McTermClient"]
+	},
+	"depends": {
+		"fabricloader": ">=0.19.5",
+		"minecraft": "~26.3",
+		"java": ">=25",
+		"fabric-api": "*"
+	}
+}

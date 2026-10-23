@@ -142,7 +142,8 @@ public final class TerminalSession implements TerminalDisplay {
 					.setInitialRows(lines)
 					.setConsole(false)
 					.start();
-		} catch (IOException | RuntimeException e) {
+		} catch (IOException | RuntimeException | LinkageError e) {
+			// LinkageError: pty4j's native library could not load (e.g. an unsupported OS); show it, never crash the game.
 			LOG.error("Failed to start {}", command, e);
 			startError = e.toString();
 			buffer = textBuffer;

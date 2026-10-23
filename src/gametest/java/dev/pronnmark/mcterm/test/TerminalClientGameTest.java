@@ -61,9 +61,14 @@ public class TerminalClientGameTest implements FabricClientGameTest {
 			// MCTERM_TEST_COMPUTER=<space>: a real [pc] sign for that herdr space, using the default computer config.
 			String space = System.getenv("MCTERM_TEST_COMPUTER");
 			if (space != null && !space.isBlank()) {
-				// Exactly what a player types to set it up.
-				context.runOnClient(mc -> mc.player.connection.sendCommand("terminal herdr pbox"));
-				context.waitTicks(5);
+				// Exactly what a player does: Cmd/Ctrl+Shift+, opens the setup question; type the host, Enter.
+				context.runOnClient(mc -> dev.pronnmark.mcterm.McTermClient.openSetup(mc));
+				context.waitForScreen(dev.pronnmark.mcterm.SetupScreen.class);
+				context.getInput().typeChars("pbox");
+				context.getInput().pressKey(InputConstants.KEY_RETURN);
+				context.waitForScreen(TerminalScreen.class);
+				context.runOnClient(mc -> mc.gui.screen().onClose());
+				context.waitFor(mc -> mc.gui.screen() == null, 100);
 				world.getServer().runCommand("setblock 0 -60 2 minecraft:oak_sign[rotation=8]{front_text:{messages:[\"[pc]\",\"" + space + "\",\"\",\"\"]}}");
 				context.waitTicks(20);
 				context.getInput().pressKey(options -> options.keyUse);
@@ -111,7 +116,7 @@ public class TerminalClientGameTest implements FabricClientGameTest {
 		try {
 			Files.createDirectories(file.getParent());
 			Files.writeString(file, "{\"command\": " + commandJson + ", \"computerCommand\": " + computerJson
-					+ ", \"computerKeys\": \"" + computerKeys + "\", \"env\": {}, \"fontSize\": 0}", StandardCharsets.UTF_8);
+					+ ", \"computerKeys\": \"" + computerKeys + "\", \"env\": {}, \"setUp\": true, \"fontSize\": 0}", StandardCharsets.UTF_8);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}

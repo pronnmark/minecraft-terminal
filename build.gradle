@@ -67,51 +67,43 @@ java {
 	targetCompatibility = JavaVersion.VERSION_25
 }
 
-// One-file install: a Modrinth modpack. Open it with the Modrinth App (or Prism Launcher) and it
-// creates a ready Minecraft + Fabric instance with Fabric API (downloaded from Modrinth) and this mod.
-tasks.register('mrpack', Zip) {
+// The installer: install.sh with this release's versions, URLs and SHA-512 hashes filled in.
+tasks.register('installer') {
 	group = 'distribution'
-	description = 'Builds build/distributions/minecraft-terminal-<version>.mrpack'
+	description = 'Builds build/distributions/install.sh for the GitHub release'
 	dependsOn tasks.named('jar')
 	def modJar = tasks.named('jar').flatMap { it.archiveFile }
+	def template = file('install.sh')
+	def out = layout.buildDirectory.file('distributions/install.sh')
 	def mcVersion = project.minecraft_version
 	def loaderVersion = project.loader_version
 	def fabricApiVersion = project.fabric_api_version
-	def packVersion = project.version
-	def index = layout.buildDirectory.file('mrpack/modrinth.index.json')
+	def modVersion = project.version
+	inputs.file template
+	inputs.file modJar
 	inputs.property 'fabricApiVersion', fabricApiVersion
-	inputs.property 'loaderVersion', loaderVersion
+	outputs.file out
 
-	archiveFileName = "minecraft-terminal-${packVersion}.mrpack"
-	destinationDirectory = layout.buildDirectory.dir('distributions')
-
-	doFirst {
+	doLast {
 		def query = URLEncoder.encode("[\"${mcVersion}\"]", 'UTF-8')
 		def versions = new groovy.json.JsonSlurper().parse(
 				new URL("https://api.modrinth.com/v2/project/fabric-api/version?game_versions=${query}"))
 		def api = versions.find { it.version_number == fabricApiVersion }
 		if (api == null) throw new GradleException("Fabric API ${fabricApiVersion} is not on Modrinth")
-		def file = api.files.find { it.primary } ?: api.files[0]
-		def json = [
-				formatVersion: 1,
-				game         : 'minecraft',
-				versionId    : packVersion,
-				name         : 'Minecraft Terminal',
-				summary      : 'A real terminal inside Minecraft. Press K, or right-click a [pc] sign.',
-				files        : [[
-						path     : "mods/${file.filename}",
-						hashes   : [sha1: file.hashes.sha1, sha512: file.hashes.sha512],
-						env      : [client: 'required', server: 'unsupported'],
-						downloads: [file.url],
-						fileSize : file.size,
-				]],
-				dependencies : [minecraft: mcVersion, 'fabric-loader': loaderVersion],
-		]
-		def out = index.get().asFile
-		out.parentFile.mkdirs()
-		out.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(json))
+		def apiFile = api.files.find { it.primary } ?: api.files[0]
+		def jar = modJar.get().asFile
+		def sha = java.security.MessageDigest.getInstance('SHA-512').digest(jar.bytes).encodeHex().toString()
+		def text = template.text
+				.replace('@MC_VERSION@', mcVersion)
+				.replace('@LOADER_VERSION@', loaderVersion)
+				.replace('@MOD_URL@', "https://github.com/pronnmark/minecraft-terminal/releases/download/v${modVersion}/${jar.name}")
+				.replace('@MOD_SHA512@', sha)
+				.replace('@API_URL@', apiFile.url)
+				.replace('@API_SHA512@', apiFile.hashes.sha512)
+		if (text =~ /@[A-Z0-9_]+@/) throw new GradleException('install.sh has an unfilled @PLACEHOLDER@')
+		def f = out.get().asFile
+		f.parentFile.mkdirs()
+		f.text = text
+		f.setExecutable(true)
 	}
-	from(index)
-	// Our own mod is not on Modrinth, so it ships inside the pack.
-	from(modJar) { into 'overrides/mods' }
 }

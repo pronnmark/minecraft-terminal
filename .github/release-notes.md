@@ -1,5 +1,7 @@
-**Install:** get the [Modrinth App](https://modrinth.com/app), download `minecraft-terminal-*.mrpack` below, and double-click it. Press Play.
+**Install** (Mac or Linux): open Terminal and paste
 
-In game: **K** opens a terminal. Write `[pc]` + a name on a sign and right-click it for a computer. `/terminal herdr <ssh-host>` connects to herdr.
+```
+curl -fsSL https://github.com/pronnmark/minecraft-terminal/releases/latest/download/install.sh | sh
+```
 
-Already on Fabric 26.3? Put the `.jar` and [Fabric API](https://modrinth.com/mod/fabric-api) in your `mods` folder instead.
+Then open Minecraft, pick the **fabric-loader** version next to Play, and press **K** in game.

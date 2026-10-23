@@ -2,6 +2,10 @@
 	"key.category.mcterm.terminal": "Terminal",
 	"key.mcterm.open": "Open terminal",
 	"mcterm.screen.title": "Terminal",
-	"mcterm.command.herdr": "Terminal: K and [pc] signs now run ssh -t %s herdr. A [pc] sign opens the herdr space named on it.",
-	"mcterm.command.shell": "Terminal: K and [pc] signs now open your own shell."
+	"mcterm.setup.title": "Terminal",
+	"mcterm.setup.help": "Leave empty for this computer. Or type an SSH host to open herdr there.",
+	"mcterm.setup.host": "SSH host",
+	"mcterm.setup.hint": "empty = this computer",
+	"mcterm.setup.bad": "only a host name, like myserver or me@1.2.3.4",
+	"mcterm.setup.done": "Open terminal"
 }

@@ -29,18 +29,26 @@ public final class McTermConfig {
 
 	/**
 	 * Keys typed once the computer's program is up; {name} is replaced. Default: nothing.
-	 * {@code /terminal herdr <host>} sets {@link #HERDR_SPACE_KEYS}.
+	 * The setup screen sets {@link #HERDR_SPACE_KEYS} when a herdr host is chosen.
 	 */
 	public String computerKeys = "";
 
 	/** Extra environment variables for the command. */
 	public Map<String, String> env = Map.of();
 
+	/** False until the player answered the setup question (first K press). */
+	public boolean setUp = false;
+
 	/** Font pixel size: 15, 20, 25, 30, 35 or 40. 0 picks one from the window size. */
 	public int fontSize = 0;
 
 	/** Ctrl+K, the name, Enter: opens that space in herdr's space picker. */
 	public static final String HERDR_SPACE_KEYS = "\u000b{name}\r";
+
+	/** The host herdr runs on, or "" for the player's own shell. */
+	public String herdrHost() {
+		return command.size() == 4 && command.get(0).equals("ssh") && command.get(3).equals("herdr") ? command.get(2) : "";
+	}
 
 	/** The player's login shell: $SHELL on macOS/Linux, PowerShell on Windows. */
 	public static List<String> defaultShell() {

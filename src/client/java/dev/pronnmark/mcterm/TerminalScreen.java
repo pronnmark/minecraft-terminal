@@ -387,6 +387,7 @@ public final class TerminalScreen extends Screen {
 	private boolean handleShortcut(int scancode) {
 		switch (scancode) {
 			case InputConstants.KEY_W -> onClose();
+			case InputConstants.KEY_COMMA -> McTermClient.openSetup(minecraft);
 			case InputConstants.KEY_V -> {
 				typed();
 				session.paste(minecraft.keyboardHandler.getClipboard());

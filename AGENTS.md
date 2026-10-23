@@ -2,8 +2,9 @@
 
 Fabric client mod (`mcterm`) for Minecraft 26.3 / Java 25. Press **K** in-game, or right-click a
 `[pc]` sign, to open a full-window terminal running a command in a pseudo-terminal — by default the
-player's own shell; `/terminal herdr <host>` switches to `ssh -t <host> herdr`. Public on GitHub;
-players install the `.mrpack` from GitHub Releases. Our own use: `/terminal herdr pbox` on pmac.
+player's own shell. The first K asks one question (`SetupScreen`): empty = own shell, a host =
+`ssh -t <host> herdr`. Public on GitHub; players install with the one-line `install.sh` from
+GitHub Releases. Our own use: answer `pbox` on pmac.
 
 ## Commands
 
@@ -11,14 +12,15 @@ players install the `.mrpack` from GitHub Releases. Our own use: `/terminal herd
 |---|---|---|
 | build | `./gradlew build` | jar in `build/libs/minecraft-terminal-<ver>.jar` |
 | test | `xvfb-run -a -s "-screen 0 1920x1080x24" ./gradlew runClientGameTest` | real client; set `MCTERM_TEST_COMMAND='["ssh","-t","pbox","herdr"]'` and/or `MCTERM_TEST_COMPUTER=<space>` to also run herdr; use `--no-daemon` (the daemon was killed mid-run twice on pbox); screenshots in `build/run/clientGameTest/screenshots/` |
-| package | `./gradlew build mrpack` | `build/distributions/*.mrpack`: Modrinth modpack, Fabric API fetched from Modrinth, our jar in `overrides/mods` |
-| release | `gh release create v<ver> build/distributions/*.mrpack build/libs/*.jar` | bump `version` in `gradle.properties` first |
+| package | `./gradlew build installer` | `build/distributions/install.sh`: `install.sh` with versions, URLs and SHA-512s filled in |
+| release | bump `version` in `gradle.properties`, commit, `git tag v<ver> && git push origin v<ver>` | CI builds and attaches `install.sh` + jar |
 
 ## Hard stops
 
 - **Never bundle JNA or SLF4J.** Minecraft already ships both; a second copy breaks class loading. `build.gradle` uses `transitive = false` for that reason.
-- **Nothing personal in defaults.** Defaults must work for any player: own shell, no host names. Our pbox/herdr setup is applied with `/terminal herdr pbox`, never baked in.
+- **Nothing personal in defaults.** Defaults must work for any player: own shell, no host names. Our pbox/herdr setup is the answer to the setup question, never baked in.
 - **Sign text is untrusted.** `computerName` keeps only letters, digits, space and `. _ -` because any player can write a sign and its name is typed into the terminal.
+- **Install is one line.** `install.sh` runs Fabric's official installer against the Minecraft Launcher (using Minecraft's bundled Java) and copies the mod + Fabric API into `mods/`; it also fills any Modrinth App Fabric 26.3 profile. Every download is SHA-512 checked. No modpack, no app to install.
 - **No AWT/Swing.** Only `jediterm-core` (no UI) is used; Minecraft's render thread is not AWT-safe, and macOS forbids AWT on the main thread.
 
 ## Working rules

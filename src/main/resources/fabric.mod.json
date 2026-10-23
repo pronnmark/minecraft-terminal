@@ -3,7 +3,7 @@
 	"id": "mcterm",
 	"version": "${version}",
 	"name": "Minecraft Terminal",
-	"description": "A real terminal inside Minecraft. Press K, or right-click a sign that says [pc]. /terminal herdr <host> connects it to herdr over SSH.",
+	"description": "A real terminal inside Minecraft. Press K, or right-click a sign that says [pc].",
 	"authors": ["pronnmark"],
 	"contact": {
 		"sources": "https://github.com/pronnmark/minecraft-terminal"

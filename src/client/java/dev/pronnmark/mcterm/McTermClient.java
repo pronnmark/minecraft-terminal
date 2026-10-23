@@ -2,10 +2,7 @@ package dev.pronnmark.mcterm;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.pronnmark.mcterm.term.TerminalSession;
-import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.api.ClientModInitializer;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
-import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
@@ -59,6 +56,26 @@ public class McTermClient implements ClientModInitializer {
 		client.gui.setScreen(new TerminalScreen(s, config, Component.literal(name)));
 	}
 
+	/** Asks the one setup question, then restarts every terminal with the answer and opens K's. */
+	public static void openSetup(Minecraft client) {
+		client.gui.setScreen(new SetupScreen(() -> {
+			McTermConfig c = McTermConfig.load();
+			c.setUp = true;
+			c.save();
+			restartAll();
+			openTerminal(client);
+		}));
+	}
+
+	/** K: the terminal, or the setup question the first time. */
+	public static void openTerminal(Minecraft client) {
+		if (!McTermConfig.load().setUp) {
+			openSetup(client);
+			return;
+		}
+		client.gui.setScreen(new TerminalScreen(session(), config, Component.translatable("mcterm.screen.title")));
+	}
+
 	/** Ends every session so the next K or [pc] click starts the new command. */
 	private static void restartAll() {
 		if (session != null) session.close();
@@ -88,10 +105,7 @@ public class McTermClient implements ClientModInitializer {
 
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			while (open.consumeClick()) {
-				if (client.gui.screen() == null) {
-					TerminalSession s = session();
-					client.gui.setScreen(new TerminalScreen(s, config, Component.translatable("mcterm.screen.title")));
-				}
+				if (client.gui.screen() == null) openTerminal(client);
 			}
 		});
 
@@ -105,32 +119,6 @@ public class McTermClient implements ClientModInitializer {
 			// FAIL: handled here, nothing is sent to the server, so it does not open the sign editor.
 			return InteractionResult.FAIL;
 		});
-
-		// /terminal herdr <host> | /terminal shell: set up without editing config/mcterm.json.
-		ClientCommandRegistrationCallback.EVENT.register((dispatcher, context) -> dispatcher.register(
-				ClientCommands.literal("terminal")
-						.then(ClientCommands.literal("herdr")
-								.then(ClientCommands.argument("host", StringArgumentType.word()).executes(ctx -> {
-									String host = StringArgumentType.getString(ctx, "host");
-									McTermConfig c = McTermConfig.load();
-									c.command = List.of("ssh", "-t", host, "herdr");
-									c.computerCommand = c.command;
-									c.computerKeys = McTermConfig.HERDR_SPACE_KEYS;
-									c.save();
-									restartAll();
-									ctx.getSource().sendFeedback(Component.translatable("mcterm.command.herdr", host));
-									return 1;
-								})))
-						.then(ClientCommands.literal("shell").executes(ctx -> {
-							McTermConfig c = McTermConfig.load();
-							c.command = McTermConfig.defaultShell();
-							c.computerCommand = c.command;
-							c.computerKeys = "";
-							c.save();
-							restartAll();
-							ctx.getSource().sendFeedback(Component.translatable("mcterm.command.shell"));
-							return 1;
-						}))));
 
 		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
 			if (session != null) session.close();

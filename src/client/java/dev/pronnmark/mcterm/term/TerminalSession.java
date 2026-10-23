@@ -56,6 +56,8 @@ public final class TerminalSession implements TerminalDisplay {
 
 	private final List<String> command;
 	private final Map<String, String> extraEnv;
+	private final String startKeys;
+	private volatile long lastOutputNanos;
 
 	private volatile PtyProcess process;
 	private volatile JediTerminal terminal;
@@ -77,8 +79,14 @@ public final class TerminalSession implements TerminalDisplay {
 	private int rows;
 
 	public TerminalSession(List<String> command, Map<String, String> extraEnv) {
+		this(command, extraEnv, "");
+	}
+
+	/** {@code startKeys} are typed once the program has drawn its first screen, e.g. to pick a herdr space. */
+	public TerminalSession(List<String> command, Map<String, String> extraEnv, String startKeys) {
 		this.command = List.copyOf(command);
 		this.extraEnv = Map.copyOf(extraEnv);
+		this.startKeys = startKeys == null ? "" : startKeys;
 	}
 
 	public synchronized boolean isStarted() {
@@ -143,7 +151,8 @@ public final class TerminalSession implements TerminalDisplay {
 		}
 
 		Executors2 exec = new Executors2();
-		PtyConnector connector = new PtyConnector(proc, command);
+		lastOutputNanos = 0;
+		PtyConnector connector = new PtyConnector(proc, command, this);
 		TerminalTypeAheadManager typeAhead = new TerminalTypeAheadManager(new NoTypeAhead(columns));
 		TerminalStarter st = new TerminalStarter(term, connector,
 				new TtyBasedArrayDataStream(connector, typeAhead::onTerminalStateChanged), typeAhead, exec);
@@ -173,7 +182,37 @@ public final class TerminalSession implements TerminalDisplay {
 		}, "mcterm-emulator");
 		emulator.setDaemon(true);
 		emulator.start();
+		if (!startKeys.isEmpty()) typeStartKeys(st);
 		LOG.info("Started {} ({}x{})", command, columns, lines);
+	}
+
+	/** Waits until the program has drawn its first screen, then types the keys one by one. */
+	private void typeStartKeys(TerminalStarter st) {
+		Thread typer = new Thread(() -> {
+			try {
+				// Ready = quiet for 500 ms, or 2 s after the first output (live UIs such as herdr animate forever).
+				long deadline = System.nanoTime() + 20_000_000_000L;
+				long first = 0;
+				while (starter == st && System.nanoTime() < deadline) {
+					long last = lastOutputNanos;
+					long now = System.nanoTime();
+					if (last != 0 && first == 0) first = now;
+					if (last != 0 && (now - last > 500_000_000L || now - first > 2_000_000_000L)) break;
+					Thread.sleep(50);
+				}
+				for (int i = 0; i < startKeys.length() && starter == st && running; ) {
+					int cp = startKeys.codePointAt(i);
+					st.sendString(new String(Character.toChars(cp)), true);
+					i += Character.charCount(cp);
+					// The first key usually opens a picker; give it time to appear.
+					Thread.sleep(i == Character.charCount(startKeys.codePointAt(0)) ? 400 : 60);
+				}
+			} catch (InterruptedException e) {
+				Thread.currentThread().interrupt();
+			}
+		}, "mcterm-startkeys");
+		typer.setDaemon(true);
+		typer.start();
 	}
 
 	public synchronized void resize(int columns, int lines) {
@@ -368,10 +407,19 @@ public final class TerminalSession implements TerminalDisplay {
 
 	private static final class PtyConnector extends ProcessTtyConnector {
 		private final PtyProcess pty;
+		private final TerminalSession session;
 
-		PtyConnector(PtyProcess pty, List<String> command) {
+		PtyConnector(PtyProcess pty, List<String> command, TerminalSession session) {
 			super(pty, StandardCharsets.UTF_8, command);
 			this.pty = pty;
+			this.session = session;
+		}
+
+		@Override
+		public int read(char[] buf, int offset, int length) throws IOException {
+			int n = super.read(buf, offset, length);
+			if (n > 0) session.lastOutputNanos = System.nanoTime();
+			return n;
 		}
 
 		@Override

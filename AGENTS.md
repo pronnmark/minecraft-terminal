@@ -9,7 +9,7 @@ Runs on the player's machine (pmac); nothing is deployed.
 | what | command | notes |
 |---|---|---|
 | build | `./gradlew build` | jar in `build/libs/minecraft-terminal-<ver>.jar` |
-| test | `xvfb-run -a -s "-screen 0 1920x1080x24" ./gradlew runClientGameTest` | real client; set `MCTERM_TEST_COMMAND='["ssh","-t","pbox","herdr"]'` to also run herdr; screenshots in `build/run/clientGameTest/screenshots/` |
+| test | `xvfb-run -a -s "-screen 0 1920x1080x24" ./gradlew runClientGameTest` | real client; set `MCTERM_TEST_COMMAND='["ssh","-t","pbox","herdr"]'` and/or `MCTERM_TEST_COMPUTER=<space>` to also run herdr; use `--no-daemon` (the daemon was killed mid-run twice on pbox); screenshots in `build/run/clientGameTest/screenshots/` |
 | install | copy the jar into the instance's `mods/` | needs Fabric API |
 
 ## Hard stops
@@ -23,6 +23,7 @@ Runs on the player's machine (pmac); nothing is deployed.
 - Font sizes are fixed in `assets/mcterm/font/term_<px>.json`; the screen picks the largest that gives ≥120×30 cells. The JetBrainsMono advance is 0.6 em, so cell width is an integer only for multiples of 5 px.
 - Key encoding: special keys go through JediTerm's `getCodeForKey` (respects application-cursor mode); printable text comes from SDL text input (`charTyped`) so layouts, dead keys and IME work. Left Alt = Meta (ESC prefix), right Alt composes — same as WezTerm on pmac.
 - Mod shortcuts: Cmd (macOS) or Ctrl+Shift (Linux/Windows) + W close, V paste, = / - font size, 0 auto size. Everything else is sent to the terminal, including Esc.
+- Computers: a sign whose first line is `[pc]` opens its own session per name (`McTermClient.openComputer`). It is client-side only (`UseBlockCallback`, returns FAIL so nothing reaches the server). herdr 0.9.5 has no flag to open a client on a space, so `computerKeys` types Ctrl+K, the name, Enter after the first draw; the palette moves only that client (verified with two clients, 2026-10-23).
 - The session survives closing the screen; K reopens it. When the process has exited, the next K re-reads `config/mcterm.json`.
 
 ## Reference

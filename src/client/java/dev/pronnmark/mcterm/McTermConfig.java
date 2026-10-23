@@ -21,6 +21,15 @@ public final class McTermConfig {
 	/** Command run in the pseudo-terminal. Your own ssh client, keys and ~/.ssh/config are used. */
 	public List<String> command = List.of("ssh", "-t", "pbox", "herdr");
 
+	/**
+	 * Command a computer runs. A computer is a sign whose first line is [pc]; the other lines are
+	 * its name, and {name} is replaced by it. Each computer is its own session and its own herdr view.
+	 */
+	public List<String> computerCommand = List.of("ssh", "-t", "pbox", "herdr");
+
+	/** Keys typed once the computer's program is up; {name} is replaced. Default: Ctrl+K, the name, Enter (herdr's space picker). */
+	public String computerKeys = "\u000b{name}\r";
+
 	/** Extra environment variables for the command. */
 	public Map<String, String> env = Map.of();
 
@@ -57,6 +66,8 @@ public final class McTermConfig {
 		}
 		if (config.command == null || config.command.isEmpty()) config.command = new McTermConfig().command;
 		if (config.env == null) config.env = Map.of();
+		if (config.computerCommand == null || config.computerCommand.isEmpty()) config.computerCommand = new McTermConfig().computerCommand;
+		if (config.computerKeys == null) config.computerKeys = "";
 		return config;
 	}
 }

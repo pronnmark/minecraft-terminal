@@ -41,6 +41,43 @@ public class TerminalClientGameTest implements FabricClientGameTest {
 			context.waitFor(mc -> !((TerminalScreen) mc.gui.screen()).session().isRunning(), 200);
 			context.takeScreenshot("mcterm-exited");
 
+			// A [pc] sign is a computer: right-click opens its own session and types its start keys.
+			writeConfig("[\"bash\", \"--norc\", \"-i\"]", "[\"bash\", \"--norc\", \"-i\"]", "echo computer-{name}-ok\\r");
+			context.runOnClient(mc -> mc.gui.screen().onClose());
+			context.waitFor(mc -> mc.gui.screen() == null, 100);
+			world.getServer().runCommand("setblock 0 -60 2 minecraft:oak_sign[rotation=8]{front_text:{messages:[\"[pc]\",\"alpha\",\"\",\"\"]}}");
+			world.getServer().runCommand("tp @a 0.5 -60 0.5 0 30");
+			world.getConnection().waitForChunksRender(true, 1200);
+			context.waitTicks(20);
+			context.getInput().pressKey(options -> options.keyUse);
+			context.waitForScreen(TerminalScreen.class);
+			waitForText(context, "computer-alpha-ok");
+			String title = context.computeOnClient(mc -> mc.gui.screen().getTitle().getString());
+			if (!title.equals("alpha")) throw new AssertionError("computer screen title was " + title);
+			context.takeScreenshot("mcterm-computer");
+			context.runOnClient(mc -> mc.gui.screen().onClose());
+			context.waitFor(mc -> mc.gui.screen() == null, 100);
+
+			// MCTERM_TEST_COMPUTER=<space>: a real [pc] sign for that herdr space, using the default computer config.
+			String space = System.getenv("MCTERM_TEST_COMPUTER");
+			if (space != null && !space.isBlank()) {
+				Path file = FabricLoader.getInstance().getConfigDir().resolve("mcterm.json");
+				try {
+					Files.deleteIfExists(file);
+				} catch (IOException e) {
+					throw new RuntimeException(e);
+				}
+				world.getServer().runCommand("setblock 0 -60 2 minecraft:oak_sign[rotation=8]{front_text:{messages:[\"[pc]\",\"" + space + "\",\"\",\"\"]}}");
+				context.waitTicks(20);
+				context.getInput().pressKey(options -> options.keyUse);
+				context.waitForScreen(TerminalScreen.class);
+				context.waitTicks(300);
+				context.takeScreenshot("mcterm-computer-herdr");
+				System.out.println("[mcterm-test] computer " + space + ":\n" + context.computeOnClient(TerminalClientGameTest::screenText));
+				context.runOnClient(mc -> mc.gui.screen().onClose());
+				context.waitFor(mc -> mc.gui.screen() == null, 100);
+			}
+
 			String command = System.getenv("MCTERM_TEST_COMMAND");
 			if (command != null && !command.isBlank()) {
 				writeConfig(command);
@@ -69,10 +106,15 @@ public class TerminalClientGameTest implements FabricClientGameTest {
 	}
 
 	private static void writeConfig(String commandJson) {
+		writeConfig(commandJson, commandJson, "");
+	}
+
+	private static void writeConfig(String commandJson, String computerJson, String computerKeys) {
 		Path file = FabricLoader.getInstance().getConfigDir().resolve("mcterm.json");
 		try {
 			Files.createDirectories(file.getParent());
-			Files.writeString(file, "{\"command\": " + commandJson + ", \"env\": {}, \"fontSize\": 0}", StandardCharsets.UTF_8);
+			Files.writeString(file, "{\"command\": " + commandJson + ", \"computerCommand\": " + computerJson
+					+ ", \"computerKeys\": \"" + computerKeys + "\", \"env\": {}, \"fontSize\": 0}", StandardCharsets.UTF_8);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}

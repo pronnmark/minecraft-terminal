@@ -67,8 +67,8 @@ public final class TerminalScreen extends Screen {
 	private int lastMotionCol = -1;
 	private int lastMotionRow = -1;
 
-	public TerminalScreen(TerminalSession session, McTermConfig config) {
-		super(Component.translatable("mcterm.screen.title"));
+	public TerminalScreen(TerminalSession session, McTermConfig config, Component title) {
+		super(title);
 		this.session = session;
 		this.config = config;
 	}

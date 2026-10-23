@@ -11,10 +11,15 @@ Or put `minecraft-terminal-<version>.jar` from
 [Releases](https://github.com/pronnmark/minecraft-terminal/releases/latest) and
 [Fabric API](https://modrinth.com/mod/fabric-api) into a Fabric 26.3 `mods` folder.
 
+![Two [pc] signs with their monitors](docs/monitors.png)
+
 ## Use
 
 **K** opens a terminal on your computer. Write `[pc]` on a sign and a name under it, then
 right-click the sign: each sign is its own computer. Sneak + right-click edits the sign.
+A monitor stands above every `[pc]` sign and shows that computer's live screen, even after you
+close it, so a row of signs looks like a room of computers. Monitors are drawn by your own
+game, so other players see the monitor but not your screen on it.
 
 | key (Mac / other) | action |
 |---|---|

@@ -58,6 +58,15 @@ public class TerminalClientGameTest implements FabricClientGameTest {
 			context.runOnClient(mc -> mc.gui.screen().onClose());
 			context.waitFor(mc -> mc.gui.screen() == null, 100);
 
+			// Closed, the computer keeps running and its monitor above the sign shows the live screen.
+			world.getServer().runCommand("setblock 3 -60 2 minecraft:oak_sign[rotation=8]{front_text:{messages:[\"[pc]\",\"beta\",\"\",\"\"]}}");
+			world.getServer().runCommand("tp @a 1.5 -60 -3.5 0 -12");
+			context.waitTicks(40);
+			context.takeScreenshot("mcterm-monitors");
+			world.getServer().runCommand("setblock 3 -60 2 minecraft:air");
+			world.getServer().runCommand("tp @a 0.5 -60 0.5 0 30");
+			context.waitTicks(20);
+
 			// MCTERM_TEST_COMPUTER=<space>: a real [pc] sign for that herdr space, using the default computer config.
 			String space = System.getenv("MCTERM_TEST_COMPUTER");
 			if (space != null && !space.isBlank()) {

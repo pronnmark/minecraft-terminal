@@ -1,7 +1,3 @@
-**Install** (Mac or Linux): open Terminal and paste
+**Install:** the one-click setup for our server installs Minecraft with this mod: https://github.com/pronnmark/minecraft-server/releases/latest
 
-```
-curl -fsSL https://github.com/pronnmark/minecraft-terminal/releases/latest/download/install.sh | sh
-```
-
-Then open Minecraft, pick the **fabric-loader** version next to Play, and press **K** in game.
+Or put this `.jar` and [Fabric API](https://modrinth.com/mod/fabric-api) into a Fabric 26.3 `mods` folder.

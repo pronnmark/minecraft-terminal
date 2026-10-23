@@ -11,8 +11,7 @@ import com.mojang.blaze3d.platform.InputConstants;
 import java.util.List;
 
 /**
- * The one question, asked the first time K is pressed (and again with Cmd/Ctrl+Shift+, in the
- * terminal): which machine to connect to. Empty means this computer's own shell; a host name
+ * Cmd/Ctrl+Shift+, in the terminal: which machine to connect to. Empty means this computer's own shell; a host name
  * means herdr on that machine over SSH, with [pc] signs opening the herdr space of their name.
  */
 public final class SetupScreen extends Screen {

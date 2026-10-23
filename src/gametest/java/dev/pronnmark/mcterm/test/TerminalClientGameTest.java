@@ -116,7 +116,7 @@ public class TerminalClientGameTest implements FabricClientGameTest {
 		try {
 			Files.createDirectories(file.getParent());
 			Files.writeString(file, "{\"command\": " + commandJson + ", \"computerCommand\": " + computerJson
-					+ ", \"computerKeys\": \"" + computerKeys + "\", \"env\": {}, \"setUp\": true, \"fontSize\": 0}", StandardCharsets.UTF_8);
+					+ ", \"computerKeys\": \"" + computerKeys + "\", \"env\": {}, \"fontSize\": 0}", StandardCharsets.UTF_8);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}

@@ -36,9 +36,6 @@ public final class McTermConfig {
 	/** Extra environment variables for the command. */
 	public Map<String, String> env = Map.of();
 
-	/** False until the player answered the setup question (first K press). */
-	public boolean setUp = false;
-
 	/** Font pixel size: 15, 20, 25, 30, 35 or 40. 0 picks one from the window size. */
 	public int fontSize = 0;
 

@@ -56,23 +56,16 @@ public class McTermClient implements ClientModInitializer {
 		client.gui.setScreen(new TerminalScreen(s, config, Component.literal(name)));
 	}
 
-	/** Asks the one setup question, then restarts every terminal with the answer and opens K's. */
+	/** Cmd/Ctrl+Shift+, in the terminal: which machine to use. Restarts every terminal with the answer. */
 	public static void openSetup(Minecraft client) {
 		client.gui.setScreen(new SetupScreen(() -> {
-			McTermConfig c = McTermConfig.load();
-			c.setUp = true;
-			c.save();
 			restartAll();
 			openTerminal(client);
 		}));
 	}
 
-	/** K: the terminal, or the setup question the first time. */
+	/** K: the terminal. */
 	public static void openTerminal(Minecraft client) {
-		if (!McTermConfig.load().setUp) {
-			openSetup(client);
-			return;
-		}
 		client.gui.setScreen(new TerminalScreen(session(), config, Component.translatable("mcterm.screen.title")));
 	}
 

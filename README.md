@@ -4,34 +4,29 @@ A real terminal inside Minecraft. Press **K**.
 
 ## Install
 
-Mac or Linux. Open Terminal and paste:
+Easiest: the one-click setup for our server, which includes this mod:
+https://github.com/pronnmark/minecraft-server#join
 
-```sh
-curl -fsSL https://github.com/pronnmark/minecraft-terminal/releases/latest/download/install.sh | sh
-```
-
-Open Minecraft, pick **fabric-loader-26.3** next to Play, press Play.
+Or put `minecraft-terminal-<version>.jar` from
+[Releases](https://github.com/pronnmark/minecraft-terminal/releases/latest) and
+[Fabric API](https://modrinth.com/mod/fabric-api) into a Fabric 26.3 `mods` folder.
 
 ## Use
 
-Press **K**. The first time it asks one thing: leave it empty for a terminal on your computer, or
-type an SSH host to open [herdr](https://herdr.dev) there.
-
-**Computers:** write `[pc]` on a sign and a project name under it. Right-click the sign to use that
-computer; it opens the herdr space with that name. Sneak + right-click edits the sign.
+**K** opens a terminal on your computer. Write `[pc]` on a sign and a name under it, then
+right-click the sign: each sign is its own computer. Sneak + right-click edits the sign.
 
 | key (Mac / other) | action |
 |---|---|
 | Cmd+W / Ctrl+Shift+W | leave (the terminal keeps running) |
 | Cmd+V / Ctrl+Shift+V | paste |
 | Cmd+= and Cmd+- | text size |
-| Cmd+, / Ctrl+Shift+, | change the host |
+| Cmd+, / Ctrl+Shift+, | connect to another machine: type an SSH host to open [herdr](https://herdr.dev) there; a `[pc]` sign then opens the herdr space with its name |
 
 ## Notes
 
-- Minecraft Java 26.3. Needs the Minecraft Launcher opened once first. Windows is not supported.
-- Updating: run the install line again.
+- Minecraft Java 26.3. macOS and Linux tested; Windows (PowerShell) untested.
 - The terminal has your user's rights. A sign's name is typed only as letters, digits, spaces and
   `. _ -`, so a sign someone else wrote cannot run commands.
-- Build: `./gradlew build installer` (JDK 25) → `build/libs/*.jar`, `build/distributions/install.sh`.
+- Build: `./gradlew build` (JDK 25) → `build/libs/*.jar`. Release: bump `version`, tag `v<version>`, push the tag.
 - Licences: code MIT; fonts SIL OFL 1.1 (`licenses/`); JediTerm Apache-2.0/LGPL-3.0, pty4j EPL-1.0.

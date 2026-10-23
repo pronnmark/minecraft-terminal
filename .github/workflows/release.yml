@@ -19,14 +19,12 @@ jobs:
           distribution: temurin
           java-version: "25"
       - uses: gradle/actions/setup-gradle@v4
-      - run: ./gradlew build installer
+      - run: ./gradlew build
       - uses: actions/upload-artifact@v4
         with:
           name: minecraft-terminal
-          path: |
-            build/libs/*.jar
-            build/distributions/install.sh
+          path: build/libs/*.jar
       - if: startsWith(github.ref, 'refs/tags/v')
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" build/distributions/install.sh build/libs/*.jar --title "$GITHUB_REF_NAME" --notes-file .github/release-notes.md
+        run: gh release create "$GITHUB_REF_NAME" build/libs/*.jar --title "$GITHUB_REF_NAME" --notes-file .github/release-notes.md

@@ -2,7 +2,10 @@ package dev.pronnmark.mcterm;
 
 import com.mojang.blaze3d.platform.InputConstants;
 import dev.pronnmark.mcterm.term.TerminalSession;
+import com.mojang.brigadier.arguments.StringArgumentType;
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommands;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
@@ -56,13 +59,24 @@ public class McTermClient implements ClientModInitializer {
 		client.gui.setScreen(new TerminalScreen(s, config, Component.literal(name)));
 	}
 
+	/** Ends every session so the next K or [pc] click starts the new command. */
+	private static void restartAll() {
+		if (session != null) session.close();
+		session = null;
+		computers.values().forEach(TerminalSession::close);
+		computers.clear();
+		config = McTermConfig.load();
+	}
+
 	/** The computer name on a sign side, or null when it is not a computer: line 1 is [pc], lines 2-4 are joined. */
 	public static String computerName(SignText text) {
 		Component[] lines = text.getMessages(false).toArray(Component[]::new);
 		if (lines.length == 0 || !lines[0].getString().strip().equalsIgnoreCase(COMPUTER_TAG)) return null;
 		StringBuilder name = new StringBuilder();
 		for (int i = 1; i < lines.length; i++) name.append(lines[i].getString().strip());
-		return name.isEmpty() ? null : name.toString();
+		// Anyone can write a sign, and its name is typed into your terminal: keep letters, digits, space, - _ .
+		String safe = name.toString().replaceAll("[^\\p{L}\\p{N} ._-]", "").strip();
+		return safe.isEmpty() ? null : safe;
 	}
 
 	@Override
@@ -91,6 +105,32 @@ public class McTermClient implements ClientModInitializer {
 			// FAIL: handled here, nothing is sent to the server, so it does not open the sign editor.
 			return InteractionResult.FAIL;
 		});
+
+		// /terminal herdr <host> | /terminal shell: set up without editing config/mcterm.json.
+		ClientCommandRegistrationCallback.EVENT.register((dispatcher, context) -> dispatcher.register(
+				ClientCommands.literal("terminal")
+						.then(ClientCommands.literal("herdr")
+								.then(ClientCommands.argument("host", StringArgumentType.word()).executes(ctx -> {
+									String host = StringArgumentType.getString(ctx, "host");
+									McTermConfig c = McTermConfig.load();
+									c.command = List.of("ssh", "-t", host, "herdr");
+									c.computerCommand = c.command;
+									c.computerKeys = McTermConfig.HERDR_SPACE_KEYS;
+									c.save();
+									restartAll();
+									ctx.getSource().sendFeedback(Component.translatable("mcterm.command.herdr", host));
+									return 1;
+								})))
+						.then(ClientCommands.literal("shell").executes(ctx -> {
+							McTermConfig c = McTermConfig.load();
+							c.command = McTermConfig.defaultShell();
+							c.computerCommand = c.command;
+							c.computerKeys = "";
+							c.save();
+							restartAll();
+							ctx.getSource().sendFeedback(Component.translatable("mcterm.command.shell"));
+							return 1;
+						}))));
 
 		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
 			if (session != null) session.close();

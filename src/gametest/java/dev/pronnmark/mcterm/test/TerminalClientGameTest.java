@@ -61,12 +61,9 @@ public class TerminalClientGameTest implements FabricClientGameTest {
 			// MCTERM_TEST_COMPUTER=<space>: a real [pc] sign for that herdr space, using the default computer config.
 			String space = System.getenv("MCTERM_TEST_COMPUTER");
 			if (space != null && !space.isBlank()) {
-				Path file = FabricLoader.getInstance().getConfigDir().resolve("mcterm.json");
-				try {
-					Files.deleteIfExists(file);
-				} catch (IOException e) {
-					throw new RuntimeException(e);
-				}
+				// Exactly what a player types to set it up.
+				context.runOnClient(mc -> mc.player.connection.sendCommand("terminal herdr pbox"));
+				context.waitTicks(5);
 				world.getServer().runCommand("setblock 0 -60 2 minecraft:oak_sign[rotation=8]{front_text:{messages:[\"[pc]\",\"" + space + "\",\"\",\"\"]}}");
 				context.waitTicks(20);
 				context.getInput().pressKey(options -> options.keyUse);

@@ -18,23 +18,37 @@ public final class McTermConfig {
 	private static final Logger LOG = LoggerFactory.getLogger("mcterm");
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
-	/** Command run in the pseudo-terminal. Your own ssh client, keys and ~/.ssh/config are used. */
-	public List<String> command = List.of("ssh", "-t", "pbox", "herdr");
+	/** Command K opens, e.g. ["ssh", "-t", "myhost", "herdr"]. Default: your own shell. */
+	public List<String> command = defaultShell();
 
 	/**
 	 * Command a computer runs. A computer is a sign whose first line is [pc]; the other lines are
 	 * its name, and {name} is replaced by it. Each computer is its own session and its own herdr view.
 	 */
-	public List<String> computerCommand = List.of("ssh", "-t", "pbox", "herdr");
+	public List<String> computerCommand = defaultShell();
 
-	/** Keys typed once the computer's program is up; {name} is replaced. Default: Ctrl+K, the name, Enter (herdr's space picker). */
-	public String computerKeys = "\u000b{name}\r";
+	/**
+	 * Keys typed once the computer's program is up; {name} is replaced. Default: nothing.
+	 * {@code /terminal herdr <host>} sets {@link #HERDR_SPACE_KEYS}.
+	 */
+	public String computerKeys = "";
 
 	/** Extra environment variables for the command. */
 	public Map<String, String> env = Map.of();
 
 	/** Font pixel size: 15, 20, 25, 30, 35 or 40. 0 picks one from the window size. */
 	public int fontSize = 0;
+
+	/** Ctrl+K, the name, Enter: opens that space in herdr's space picker. */
+	public static final String HERDR_SPACE_KEYS = "\u000b{name}\r";
+
+	/** The player's login shell: $SHELL on macOS/Linux, PowerShell on Windows. */
+	public static List<String> defaultShell() {
+		if (System.getProperty("os.name", "").toLowerCase().startsWith("windows")) return List.of("powershell.exe");
+		String shell = System.getenv("SHELL");
+		if (shell == null || shell.isBlank()) shell = Files.isExecutable(Path.of("/bin/zsh")) ? "/bin/zsh" : "/bin/bash";
+		return List.of(shell, "-l");
+	}
 
 	private static Path file() {
 		return FabricLoader.getInstance().getConfigDir().resolve("mcterm.json");
@@ -64,9 +78,9 @@ public final class McTermConfig {
 			config = new McTermConfig();
 			config.save();
 		}
-		if (config.command == null || config.command.isEmpty()) config.command = new McTermConfig().command;
+		if (config.command == null || config.command.isEmpty()) config.command = defaultShell();
 		if (config.env == null) config.env = Map.of();
-		if (config.computerCommand == null || config.computerCommand.isEmpty()) config.computerCommand = new McTermConfig().computerCommand;
+		if (config.computerCommand == null || config.computerCommand.isEmpty()) config.computerCommand = defaultShell();
 		if (config.computerKeys == null) config.computerKeys = "";
 		return config;
 	}

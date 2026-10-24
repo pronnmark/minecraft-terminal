@@ -15,8 +15,9 @@ Or put `minecraft-terminal-<version>.jar` from
 
 ## Use
 
-**K** opens a terminal on your computer. Write `[pc]` on a sign and a name under it, then
-right-click the sign: each sign is its own computer. Sneak + right-click edits the sign.
+**K** opens a terminal on your computer. Write `pc` on a sign (or `[pc]`, optionally with a
+name after it or on the next line), then right-click the sign: each sign is its own computer.
+A sign with no name is named after where it stands. Hanging signs are not computers. Sneak + right-click edits the sign.
 A monitor stands above every `[pc]` sign and shows that computer's live screen, even after you
 close it, so a row of signs looks like a room of computers. Monitors are drawn by your own
 game, so other players see the monitor but not your screen on it.

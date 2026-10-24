@@ -63,8 +63,8 @@ final class ComputerMonitors {
 					if (!(be instanceof SignBlockEntity sign) || sign instanceof HangingSignBlockEntity) continue;
 					BlockPos pos = sign.getBlockPos();
 					if (camera.distanceToSqr(Vec3.atCenterOf(pos)) > MAX_DISTANCE * MAX_DISTANCE) continue;
-					String front = McTermClient.computerName(sign.getText(SignTextSlot.FRONT));
-					String back = McTermClient.computerName(sign.getText(SignTextSlot.BACK));
+					String front = McTermClient.computerName(sign.getText(SignTextSlot.FRONT), pos);
+					String back = McTermClient.computerName(sign.getText(SignTextSlot.BACK), pos);
 					if (front == null && back == null) continue;
 					SignRenderState.SignTransformations t = transformations(sign.getBlockState());
 					if (t == null) continue;

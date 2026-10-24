@@ -10,6 +10,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.InteractionResult;
@@ -24,9 +25,6 @@ import java.util.Map;
 public class McTermClient implements ClientModInitializer {
 	private static final KeyMapping.Category CATEGORY =
 			KeyMapping.Category.register(Identifier.fromNamespaceAndPath("mcterm", "terminal"));
-
-	/** First line of a sign that makes it a computer. */
-	public static final String COMPUTER_TAG = "[pc]";
 
 	private static McTermConfig config;
 	private static TerminalSession session;
@@ -84,15 +82,24 @@ public class McTermClient implements ClientModInitializer {
 		config = McTermConfig.load();
 	}
 
-	/** The computer name on a sign side, or null when it is not a computer: line 1 is [pc], lines 2-4 are joined. */
-	public static String computerName(SignText text) {
+	/**
+	 * The computer name on a sign side, or null when it is not a computer. Line 1 is {@code pc} or
+	 * {@code [pc]} (any case), optionally followed by the name; the other lines add to the name. A
+	 * sign with no name is named after its position, so every bare "pc" sign is its own computer.
+	 */
+	public static String computerName(SignText text, BlockPos pos) {
 		Component[] lines = text.getMessages(false).toArray(Component[]::new);
-		if (lines.length == 0 || !lines[0].getString().strip().equalsIgnoreCase(COMPUTER_TAG)) return null;
-		StringBuilder name = new StringBuilder();
-		for (int i = 1; i < lines.length; i++) name.append(lines[i].getString().strip());
+		if (lines.length == 0) return null;
+		String first = lines[0].getString().strip().replaceFirst("^\\[\\s*(?i:pc)\\s*]", "pc ");
+		if (!first.regionMatches(true, 0, "pc", 0, 2) || (first.length() > 2 && first.charAt(2) != ' ')) return null;
+		StringBuilder name = new StringBuilder(first.substring(2).strip());
+		for (int i = 1; i < lines.length; i++) {
+			String line = lines[i].getString().strip();
+			if (!line.isEmpty()) name.append(name.isEmpty() ? "" : " ").append(line);
+		}
 		// Anyone can write a sign, and its name is typed into your terminal: keep letters, digits, space, - _ .
 		String safe = name.toString().replaceAll("[^\\p{L}\\p{N} ._-]", "").strip();
-		return safe.isEmpty() ? null : safe;
+		return safe.isEmpty() ? "pc " + pos.getX() + " " + pos.getY() + " " + pos.getZ() : safe;
 	}
 
 	@Override
@@ -108,11 +115,11 @@ public class McTermClient implements ClientModInitializer {
 			}
 		});
 
-		// Right-click a [pc] sign to use that computer; sneak + right-click still edits the sign.
+		// Right-click a pc sign to use that computer; sneak + right-click still edits the sign.
 		UseBlockCallback.EVENT.register((player, level, hand, hit) -> {
 			if (!level.isClientSide() || player.isSecondaryUseActive()) return InteractionResult.PASS;
 			if (!(level.getBlockEntity(hit.getBlockPos()) instanceof SignBlockEntity sign)) return InteractionResult.PASS;
-			String name = computerName(sign.getText(sign.getSlotPlayerIsFacing(player)));
+			String name = computerName(sign.getText(sign.getSlotPlayerIsFacing(player)), hit.getBlockPos());
 			if (name == null) return InteractionResult.PASS;
 			openComputer(Minecraft.getInstance(), name);
 			// FAIL: handled here, nothing is sent to the server, so it does not open the sign editor.

@@ -60,15 +60,22 @@ public class TerminalClientGameTest implements FabricClientGameTest {
 
 			// Closed, the computer keeps running and its monitor above the sign shows the live screen.
 			world.getServer().runCommand("setblock 3 -60 2 minecraft:oak_sign[rotation=8]{front_text:{messages:[\"pc\",\"\",\"\",\"\"]}}");
-			world.getServer().runCommand("tp @a 1.5 -60 -3.5 0 -12");
+			world.getServer().runCommand("setblock 6 -60 3 minecraft:stone");
+			world.getServer().runCommand("setblock 6 -59 2 minecraft:oak_wall_sign[facing=north]{front_text:{messages:[\"[pc]\",\"gamma\",\"\",\"\"]}}");
+			world.getServer().runCommand("setblock 6 -59 3 minecraft:stone");
+			world.getServer().runCommand("tp @a 3 -59.4 -1.2 0 22");
 			context.waitTicks(40);
 			context.takeScreenshot("mcterm-monitors");
+			world.getServer().runCommand("tp @a 0.9 -59.6 0.6 -25 30");
+			context.waitTicks(10);
+			context.takeScreenshot("mcterm-desk");
 			// A bare "pc" sign is a computer too, named after where it stands.
 			String bare = context.computeOnClient(mc -> dev.pronnmark.mcterm.McTermClient.computerName(
 					((net.minecraft.world.level.block.entity.SignBlockEntity) mc.level.getBlockEntity(new net.minecraft.core.BlockPos(3, -60, 2)))
 							.getText(net.minecraft.world.level.block.entity.SignTextSlot.FRONT), new net.minecraft.core.BlockPos(3, -60, 2)));
 			if (!"pc 3 -60 2".equals(bare)) throw new AssertionError("bare pc sign was named " + bare);
 			world.getServer().runCommand("setblock 3 -60 2 minecraft:air");
+			world.getServer().runCommand("setblock 6 -59 2 minecraft:air");
 			world.getServer().runCommand("tp @a 0.5 -60 0.5 0 30");
 			context.waitTicks(20);
 

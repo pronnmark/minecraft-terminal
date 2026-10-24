@@ -6,7 +6,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keymapping.v1.KeyMappingHelper;
-import net.fabricmc.fabric.api.client.rendering.v1.level.LevelRenderEvents;
+import net.fabricmc.fabric.api.client.rendering.v1.BlockEntityRendererRegistry;
 import net.fabricmc.fabric.api.event.player.UseBlockCallback;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
@@ -14,6 +14,7 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.Identifier;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.level.block.entity.BlockEntityTypes;
 import net.minecraft.world.level.block.entity.SignBlockEntity;
 import net.minecraft.world.level.block.entity.SignText;
 
@@ -53,6 +54,17 @@ public class McTermClient implements ClientModInitializer {
 			computers.put(name, s);
 		}
 		client.gui.setScreen(new TerminalScreen(s, config, Component.literal(name)));
+	}
+
+	private static void lookAt(net.minecraft.world.entity.player.Player player, net.minecraft.world.phys.Vec3 target) {
+		net.minecraft.world.phys.Vec3 d = target.subtract(player.getEyePosition());
+		float yaw = (float) (Math.toDegrees(Math.atan2(d.z, d.x)) - 90);
+		float pitch = (float) -Math.toDegrees(Math.atan2(d.y, Math.sqrt(d.x * d.x + d.z * d.z)));
+		player.setYRot(yaw);
+		player.setXRot(pitch);
+		player.setYHeadRot(yaw);
+		player.yRotO = yaw;
+		player.xRotO = pitch;
 	}
 
 	/** The running session of a computer, or null before its first right-click. Drawn on its monitor. */
@@ -121,13 +133,17 @@ public class McTermClient implements ClientModInitializer {
 			if (!(level.getBlockEntity(hit.getBlockPos()) instanceof SignBlockEntity sign)) return InteractionResult.PASS;
 			String name = computerName(sign.getText(sign.getSlotPlayerIsFacing(player)), hit.getBlockPos());
 			if (name == null) return InteractionResult.PASS;
+			// Sit down at it: face the middle of its screen, then open it.
+			Computer computer = Computer.of(sign);
+			if (computer != null) lookAt(player, computer.screenCenter(hit.getBlockPos()));
 			openComputer(Minecraft.getInstance(), name);
 			// FAIL: handled here, nothing is sent to the server, so it does not open the sign editor.
 			return InteractionResult.FAIL;
 		});
 
-		// Every [pc] sign gets a monitor above it showing that computer's live screen.
-		LevelRenderEvents.COLLECT_SUBMITS.register(ComputerMonitors::submit);
+		// A sign that says pc is drawn as a computer, its screen showing that computer's live terminal.
+		BlockEntityRendererRegistry.register(BlockEntityTypes.SIGN, ComputerRenderer::new);
+		HideComputerSigns.register();
 
 		ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
 			if (session != null) session.close();

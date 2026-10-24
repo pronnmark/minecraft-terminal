@@ -29,7 +29,8 @@ import org.lwjgl.sdl.SDLKeyboard;
 import java.nio.charset.StandardCharsets;
 
 /**
- * Full-window terminal. Draws in physical pixels (the GUI pose is scaled by 1/guiScale) so the
+ * The computer's screen, opened in front of you: the terminal fills 90% of the window inside a
+ * monitor bezel and the world stays visible around it. Draws in physical pixels (the GUI pose is scaled by 1/guiScale) so the
  * TrueType glyphs are rasterised 1:1 and stay sharp at any GUI scale.
  */
 public final class TerminalScreen extends Screen {
@@ -38,6 +39,10 @@ public final class TerminalScreen extends Screen {
 	private static final int MIN_AUTO_COLUMNS = 120;
 	private static final int MIN_AUTO_ROWS = 30;
 	private static final int PAD = 4;
+	/** Share of the window's shorter side left around the monitor on each side. */
+	private static final float MARGIN = 0.05f;
+	private static final long OPEN_MS = 180;
+	private static final int BEZEL_COLOR = 0xff2b2b33, BEZEL_EDGE = 0xff3a3a44;
 
 	// SDL modifier bits (KeyEvent.modifiers()).
 	private static final int MOD_SHIFT = 0x0003;
@@ -60,6 +65,10 @@ public final class TerminalScreen extends Screen {
 	private int cols = 80;
 	private int rows = 24;
 	private final Int2BooleanOpenHashMap monospaced = new Int2BooleanOpenHashMap();
+	/** The terminal area in window pixels: top-left corner and size. */
+	private int ox, oy, areaW, areaH;
+	private final long openedAt = Util.getMillis();
+	private boolean hidHud;
 
 	private int scrollBack;
 	private boolean swallowText;
@@ -91,21 +100,41 @@ public final class TerminalScreen extends Screen {
 		return minecraft.getWindow().getHeight();
 	}
 
+	private int bezel() {
+		return Math.max(6, Math.round(Math.min(pixelWidth(), pixelHeight()) * 0.012f));
+	}
+
+	private void layout() {
+		int margin = Math.round(Math.min(pixelWidth(), pixelHeight()) * MARGIN) + bezel();
+		ox = margin;
+		oy = margin;
+		areaW = Math.max(100, pixelWidth() - 2 * margin);
+		areaH = Math.max(60, pixelHeight() - 2 * margin);
+	}
+
 	@Override
 	protected void init() {
 		minecraft.textInputManager().startTextInput(this);
+		// The hotbar would sit under the monitor's bottom edge; hide it while you use the computer.
+		if (!minecraft.gui.hud.isHidden()) {
+			minecraft.gui.hud.toggle();
+			hidHud = true;
+		}
+		layout();
 		applyFont(config.fontSize > 0 ? config.fontSize : autoFontSize());
 	}
 
 	@Override
 	public void removed() {
 		minecraft.textInputManager().stopTextInput(this);
+		if (hidHud && minecraft.gui.hud.isHidden()) minecraft.gui.hud.toggle();
+		hidHud = false;
 		super.removed();
 	}
 
 	private int autoFontSize() {
-		int w = pixelWidth() - 2 * PAD;
-		int h = pixelHeight() - 2 * PAD;
+		int w = areaW - 2 * PAD;
+		int h = areaH - 2 * PAD;
 		for (int i = FONT_SIZES.length - 1; i >= 0; i--) {
 			int s = FONT_SIZES[i];
 			if (w / Math.round(s * 0.6f) >= MIN_AUTO_COLUMNS && h / Math.round(s * 1.32f) >= MIN_AUTO_ROWS) return s;
@@ -122,8 +151,8 @@ public final class TerminalScreen extends Screen {
 		cellW = Math.max(1, Math.round(advance("M")));
 		cellH = Math.round(chosen * 1.32f);
 		baseline = Math.round(chosen * 1.02f);
-		cols = Math.max(10, (pixelWidth() - 2 * PAD) / cellW);
-		rows = Math.max(4, (pixelHeight() - 2 * PAD) / cellH);
+		cols = Math.max(10, (areaW - 2 * PAD) / cellW);
+		rows = Math.max(4, (areaH - 2 * PAD) / cellH);
 		if (!session.isStarted()) {
 			session.start(cols, rows);
 		} else {
@@ -164,7 +193,7 @@ public final class TerminalScreen extends Screen {
 
 	@Override
 	public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float partialTick) {
-		// The terminal paints an opaque background itself.
+		// No blur: the world stays visible around the monitor, only dimmed a little to keep focus.
 	}
 
 	// ---- rendering ----
@@ -177,7 +206,20 @@ public final class TerminalScreen extends Screen {
 		float inv = 1f / guiScale();
 		g.pose().pushMatrix();
 		g.pose().scale(inv, inv);
-		g.fill(0, 0, pixelWidth(), pixelHeight(), argb(Palette.BACKGROUND));
+		float t = Math.min(1f, (Util.getMillis() - openedAt) / (float) OPEN_MS);
+		float ease = 1 - (1 - t) * (1 - t) * (1 - t);
+		g.fill(0, 0, pixelWidth(), pixelHeight(), Math.round(0x50 * ease) << 24);
+		// Opening: the monitor grows from the middle of the window, as if you lean in to it.
+		float grow = 0.85f + 0.15f * ease;
+		g.pose().translate(pixelWidth() / 2f, pixelHeight() / 2f);
+		g.pose().scale(grow, grow);
+		g.pose().translate(-pixelWidth() / 2f + ox, -pixelHeight() / 2f + oy);
+		int b = bezel();
+		g.fill(-b - 1, -b - 1, areaW + b + 1, areaH + b + 1, BEZEL_EDGE);
+		g.fill(-b, -b, areaW + b, areaH + b, BEZEL_COLOR);
+		g.fill(areaW - 3 * b, areaH + b / 2 - 1, areaW - 2 * b, areaH + b / 2 + 1, 0xff40d060);
+		g.enableScissor(0, 0, areaW, areaH);
+		g.fill(0, 0, areaW, areaH, argb(Palette.BACKGROUND));
 		if (snap != null) {
 			scrollBack = Math.min(scrollBack, snap.historyLines());
 			drawCells(g, snap);
@@ -187,9 +229,10 @@ public final class TerminalScreen extends Screen {
 		if (banner != null) {
 			g.nextStratum();
 			int y = PAD + (rows - 1) * cellH;
-			g.fill(0, y, pixelWidth(), y + cellH, argb(Palette.BAR_BACKGROUND));
+			g.fill(0, y, areaW, y + cellH, argb(Palette.BAR_BACKGROUND));
 			drawText(g, banner, PAD, y, Palette.FOREGROUND, false, false);
 		}
+		g.disableScissor();
 		g.pose().popMatrix();
 	}
 
@@ -467,11 +510,11 @@ public final class TerminalScreen extends Screen {
 	// ---- mouse ----
 
 	private int col(double guiX) {
-		return clamp((int) ((guiX * guiScale() - PAD) / cellW), cols - 1);
+		return clamp((int) ((guiX * guiScale() - ox - PAD) / cellW), cols - 1);
 	}
 
 	private int row(double guiY) {
-		return clamp((int) ((guiY * guiScale() - PAD) / cellH), rows - 1);
+		return clamp((int) ((guiY * guiScale() - oy - PAD) / cellH), rows - 1);
 	}
 
 	private static int clamp(int v, int max) {
